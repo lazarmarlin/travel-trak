@@ -3,127 +3,458 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0A6B49">
 <title>Travel Trak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  :root {
+    --asphalt: #1F2528;
+    --sign: #0A6B49;
+    --sign-deep: #074D35;
+    --shield: #1D4E89;
+    --amber: #F2B705;
+    --stamp: #B3302A;
+    --paper: #E3E8E2;
+    --card: #F8FAF7;
+    --line: #C5CEC7;
+    --muted: #56635B;
+    --l0: #D3DAD4; --l1: #9CCBB1; --l2: #43A079; --l3: #0A6B49;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #1d1d1f; }
-  .app { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; }
-  header { background: #1d1d1f; color: white; padding: 16px; font-weight: 600; }
-  .content { padding: 16px; padding-bottom: 80px; }
-  .stats { display: flex; gap: 16px; margin-bottom: 20px; }
-  .stat { flex: 1; background: #f5f5f7; border-radius: 12px; padding: 16px; text-align: center; }
-  .stat .num { font-size: 28px; font-weight: 700; }
-  .stat .label { font-size: 13px; color: #86868b; }
-  .list-item { background: #fff; border: 1px solid #e5e5ea; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; }
-  .btn { background: #007aff; color: white; border: none; border-radius: 10px; padding: 14px; width: 100%; font-size: 16px; font-weight: 600; margin-top: 8px; }
-  .btn:disabled { background: #34c759; }
-  .tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; border-top: 1px solid #e5e5ea; display: flex; }
-  .tab { flex: 1; text-align: center; padding: 10px 0; font-size: 11px; color: #86868b; cursor: pointer; }
-  .tab.active { color: #007aff; font-weight: 600; }
-  .onboard { text-align: center; padding: 40px 20px; }
-  .avatar { width: 80px; height: 80px; border-radius: 50%; background: #007aff; color: white; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 16px; }
-  input { width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 8px; margin: 8px 0; font-size: 16px; }
-  .error { color: #ff3b30; font-size: 13px; margin-top: 8px; min-height: 18px; }
-  .hint { font-size: 12px; color: #86868b; margin-top: 16px; text-align: left; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-family: 'Overpass', 'Helvetica Neue', Arial, sans-serif; background: var(--paper); color: var(--asphalt); line-height: 1.4; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--shield); outline-offset: 2px; }
+  ul { list-style: none; }
+  [hidden] { display: none !important; }
+
+  .app { max-width: 520px; margin: 0 auto; background: var(--card); min-height: 100vh; border-left: 1px solid var(--line); border-right: 1px solid var(--line); position: relative; }
+
+  /* Header styled like a guide sign: green field, white inset rule */
+  header { background: var(--sign); color: #fff; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 5; box-shadow: inset 0 0 0 2px var(--sign), inset 0 0 0 4px rgba(255,255,255,.85); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: .2px; padding: 4px 6px; }
+  .brand svg { width: 28px; height: 28px; flex: none; }
+  .pill { background: #fff; color: var(--sign-deep); font-weight: 800; border-radius: 999px; padding: 4px 12px; font-size: 14px; margin-right: 4px; }
+
+  .content { padding: 18px 16px 96px; }
+  h1 { font-size: 28px; line-height: 1.1; font-weight: 800; }
+  h2 { font-size: 18px; font-weight: 800; margin: 26px 0 10px; }
+  .sub { color: var(--muted); font-size: 15px; margin-top: 6px; max-width: 46ch; }
+
+  /* The one memorable thing: a tile map of the states, filled in as you stamp them */
+  .grid { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; margin: 16px 0 10px; }
+  .tile { aspect-ratio: 1; border: 0; border-radius: 4px; font-weight: 800; font-size: 11px; display: grid; place-items: center; padding: 0; background: var(--l0); color: var(--asphalt); }
+  .tile.l1 { background: var(--l1); }
+  .tile.l2 { background: var(--l2); color: #fff; }
+  .tile.l3 { background: var(--l3); color: #fff; }
+  button.tile:hover { filter: brightness(.94); }
+  .legend { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .legend i { width: 18px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 2px solid var(--asphalt); border-bottom: 1px solid var(--line); margin-top: 22px; }
+  .stat { padding: 12px 4px 12px 0; }
+  .stat + .stat { padding-left: 14px; border-left: 1px solid var(--line); }
+  .stat .num { font-size: 26px; font-weight: 800; line-height: 1.1; }
+  .stat .label { font-size: 14px; color: var(--muted); }
+
+  .banner { background: #FFF1BF; border-left: 5px solid var(--amber); padding: 10px 12px; font-size: 14px; margin-bottom: 16px; border-radius: 0 6px 6px 0; }
+
+  .list { display: grid; gap: 8px; }
+  .poi { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-left: 6px solid var(--muted); border-radius: 8px; padding: 10px 10px 10px 12px; }
+  .poi[data-cat="national_park"], .poi[data-cat="state_park"] { border-left-color: var(--sign); }
+  .poi[data-cat="landmark"] { border-left-color: var(--shield); }
+  .poi[data-cat="food"] { border-left-color: var(--amber); }
+  .poi-name { font-weight: 600; font-size: 16px; line-height: 1.25; }
+  .poi-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .poi-side { display: grid; justify-items: end; gap: 2px; min-width: 92px; }
+  .pts { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .group { font-weight: 800; font-size: 15px; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--asphalt); }
+  .group:first-child { margin-top: 0; }
+
+  .mark { border: 2px solid var(--sign); background: transparent; color: var(--sign-deep); font-weight: 800; border-radius: 8px; padding: 8px 10px; min-height: 44px; font-size: 14px; }
+  .mark:hover { background: var(--sign); color: #fff; }
+
+  /* Rubber-stamp for visited places */
+  .stamp-btn { background: none; border: 0; padding: 0; border-radius: 50%; }
+  .stamp { display: grid; place-content: center; width: 64px; height: 64px; border: 3px double var(--stamp); border-radius: 50%; color: var(--stamp); font-weight: 800; font-size: 13px; line-height: 1.1; text-align: center; transform: rotate(-8deg); }
+  .stamp small { font-size: 11px; font-weight: 600; }
+  .stamp.fresh { animation: thud .32s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes thud { from { transform: rotate(-20deg) scale(2.2); opacity: 0; } to { transform: rotate(-8deg) scale(1); opacity: 1; } }
+  .recent .poi { grid-template-columns: 1fr auto; }
+  .recent .stamp { width: 54px; height: 54px; font-size: 12px; }
+
+  .filters { display: grid; gap: 10px; margin-bottom: 14px; }
+  input[type=search], input[type=email], input[type=password], select { width: 100%; padding: 12px; border: 2px solid var(--line); border-radius: 8px; background: #fff; font-size: 16px; min-height: 48px; }
+  input:focus, select:focus { border-color: var(--shield); outline: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 14px; min-height: 38px; }
+  .chip[aria-pressed="true"] { background: var(--asphalt); border-color: var(--asphalt); color: #fff; }
+  .empty { padding: 28px 8px; color: var(--muted); }
+  .empty strong { display: block; color: var(--asphalt); font-size: 17px; margin-bottom: 4px; }
+
+  .btn { display: block; width: 100%; border: 2px solid var(--sign); background: var(--sign); color: #fff; border-radius: 10px; padding: 12px; min-height: 50px; font-size: 16px; font-weight: 800; margin-top: 10px; }
+  .btn:hover { background: var(--sign-deep); border-color: var(--sign-deep); }
+  .btn.alt { background: transparent; color: var(--sign-deep); }
+  .btn.alt:hover { background: var(--l1); }
+  .btn:disabled { opacity: .6; cursor: wait; }
+  .linkish { background: none; border: 0; color: var(--shield); font-weight: 600; text-decoration: underline; padding: 10px 0; min-height: 44px; }
+
+  .auth { padding-top: 6px; }
+  .auth form { margin-top: 18px; display: grid; gap: 10px; }
+  .auth .btn { margin-top: 0; }
+  .msg { min-height: 22px; font-size: 14px; font-weight: 600; }
+  .msg.err { color: var(--stamp); }
+  .msg.ok { color: var(--sign-deep); }
+  label { font-weight: 600; font-size: 14px; display: grid; gap: 4px; }
+
+  .me { display: flex; gap: 14px; align-items: center; margin-bottom: 4px; }
+  .avatar { width: 64px; height: 64px; border-radius: 12px; background: var(--shield); color: #fff; display: grid; place-items: center; font-size: 30px; font-weight: 800; flex: none; }
+  .board li { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; padding: 10px 6px; border-bottom: 1px solid var(--line); }
+  .board li.me-row { background: #FFF1BF; font-weight: 800; }
+  .rank { font-weight: 800; color: var(--muted); }
+
+  .tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: var(--asphalt); display: grid; grid-template-columns: repeat(4, 1fr); padding-bottom: env(safe-area-inset-bottom); z-index: 6; }
+  .tab { background: none; border: 0; color: #C9D2CC; padding: 14px 0 12px; font-size: 14px; font-weight: 600; border-top: 4px solid transparent; min-height: 52px; }
+  .tab[aria-current="page"] { color: #fff; border-top-color: var(--amber); font-weight: 800; }
+
+  #toast { position: fixed; left: 50%; bottom: 76px; transform: translate(-50%, 20px); background: var(--asphalt); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 14px; max-width: 90vw; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 10; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stamp.fresh { animation: none; }
+    #toast { transition: none; }
+  }
 </style>
 </head>
 <body>
 <div class="app">
-  <header><span id="header-title">Travel Trak</span></header>
-  <div class="content" id="content"></div>
-  <nav class="tabs" id="tabs" style="display:none;">
-    <div class="tab active" data-tab="dashboard">Dashboard</div>
-    <div class="tab" data-tab="explore">Explore</div>
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 1.5 5 5.5v8.2c0 7.2 4.4 13.1 11 16.8 6.6-3.7 11-9.6 11-16.8V5.5L16 1.5z" fill="#fff"/><text x="16" y="19.5" text-anchor="middle" font-family="Overpass, Arial, sans-serif" font-weight="800" font-size="12" fill="#0A6B49">TT</text></svg>
+      Travel Trak
+    </div>
+    <span class="pill" id="hdr-pts" hidden></span>
+  </header>
+  <main class="content" id="content" tabindex="-1"></main>
+  <nav class="tabs" id="tabs" aria-label="Main" hidden>
+    <button class="tab" data-act="tab" data-tab="home">Home</button>
+    <button class="tab" data-act="tab" data-tab="explore">Explore</button>
+    <button class="tab" data-act="tab" data-tab="nearby">Nearby</button>
+    <button class="tab" data-act="tab" data-tab="profile">Profile</button>
   </nav>
 </div>
+<div id="toast" role="status" aria-live="polite"></div>
+
 <script>
 const SUPABASE_URL = "https://nwptxncvixkfapbizdgg.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_9BTKJegib7EsfvshAWH8hg_78PbUaa8";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const state = { user: null, profile: null, currentTab: "auth", pois: [], visits: new Set() };
-async function init() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    state.user = session.user;
-    await ensureProfile();
-    await loadProfile();
-    state.currentTab = "dashboard";
-    document.getElementById("tabs").style.display = "flex";
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+// Shown only when the pois table is empty or unreachable. Same ids that import_pois.py generates.
+const SAMPLE_POIS = [{"id":"al-oak-mountain-state-park","name":"Oak Mountain State Park","category":"national_park","subcategory":"national_park","state":"AL","lat":33.3436351,"lon":-86.7285869,"points":50},{"id":"al-frank-jackson-state-park","name":"Frank Jackson State Park","category":"national_park","subcategory":"national_park","state":"AL","lat":31.3096732,"lon":-86.2818538,"points":50},{"id":"al-desoto-state-park","name":"Desoto State Park","category":"national_park","subcategory":"national_park","state":"AL","lat":34.4925747,"lon":-85.6260955,"points":50},{"id":"al-birmingham-civil-rights-national-monumen","name":"Birmingham Civil Rights National Monument","category":"national_park","subcategory":"national_park","state":"AL","lat":33.5155643,"lon":-86.8140681,"points":50},{"id":"la-poverty-point-reservoir-state-park","name":"Poverty Point Reservoir State Park","category":"state_park","subcategory":"state_park","state":"LA","lat":32.5,"lon":-91.5,"points":50},{"id":"la-fontainebleau-state-park","name":"Fontainebleau State Park","category":"state_park","subcategory":"state_park","state":"LA","lat":30.3,"lon":-90.0,"points":50},{"id":"al-uss-alabama-battleship-memorial-park","name":"USS Alabama Battleship Memorial Park","category":"landmark","subcategory":"Historic Ship","state":"AL","lat":null,"lon":null,"points":25},{"id":"ak-denali-national-park-/-mount-denali","name":"Denali National Park / Mount Denali","category":"landmark","subcategory":"National Park","state":"AK","lat":null,"lon":null,"points":25},{"id":"az-grand-canyon-national-park","name":"Grand Canyon National Park","category":"landmark","subcategory":"National Park","state":"AZ","lat":null,"lon":null,"points":25},{"id":"ar-hot-springs-national-park","name":"Hot Springs National Park","category":"landmark","subcategory":"National Park","state":"AR","lat":null,"lon":null,"points":25},{"id":"ca-golden-gate-bridge","name":"Golden Gate Bridge","category":"landmark","subcategory":"Landmark","state":"CA","lat":null,"lon":null,"points":25},{"id":"co-rocky-mountain-national-park","name":"Rocky Mountain National Park","category":"landmark","subcategory":"National Park","state":"CO","lat":null,"lon":null,"points":25},{"id":"ct-mystic-seaport","name":"Mystic Seaport","category":"landmark","subcategory":"Historic Site","state":"CT","lat":null,"lon":null,"points":25},{"id":"de-rehoboth-beach-boardwalk","name":"Rehoboth Beach Boardwalk","category":"landmark","subcategory":"Beach / Boardwalk","state":"DE","lat":null,"lon":null,"points":25},{"id":"fl-walt-disney-world-/-universal","name":"Walt Disney World / Universal","category":"landmark","subcategory":"Theme Park","state":"FL","lat":null,"lon":null,"points":25},{"id":"ga-georgia-aquarium","name":"Georgia Aquarium","category":"landmark","subcategory":"Aquarium","state":"GA","lat":null,"lon":null,"points":25},{"id":"hi-hawaii-volcanoes-national-park","name":"Hawaii Volcanoes National Park","category":"landmark","subcategory":"National Park","state":"HI","lat":null,"lon":null,"points":25},{"id":"id-craters-of-the-moon-national-monument","name":"Craters of the Moon National Monument","category":"landmark","subcategory":"National Monument","state":"ID","lat":null,"lon":null,"points":25},{"id":"il-willis-tower-/-cloud-gate-(the-bean)","name":"Willis Tower / Cloud Gate (The Bean)","category":"landmark","subcategory":"Landmark","state":"IL","lat":null,"lon":null,"points":25},{"id":"in-indianapolis-motor-speedway","name":"Indianapolis Motor Speedway","category":"landmark","subcategory":"Sports","state":"IN","lat":null,"lon":null,"points":25},{"id":"ia-field-of-dreams","name":"Field of Dreams","category":"landmark","subcategory":"Movie Site","state":"IA","lat":null,"lon":null,"points":25},{"id":"ks-monument-rocks","name":"Monument Rocks","category":"landmark","subcategory":"Natural Landmark","state":"KS","lat":null,"lon":null,"points":25},{"id":"ky-mammoth-cave-national-park","name":"Mammoth Cave National Park","category":"landmark","subcategory":"National Park","state":"KY","lat":null,"lon":null,"points":25},{"id":"la-french-quarter-/-bourbon-street","name":"French Quarter / Bourbon Street","category":"landmark","subcategory":"Historic District","state":"LA","lat":null,"lon":null,"points":25},{"id":"me-acadia-national-park","name":"Acadia National Park","category":"landmark","subcategory":"National Park","state":"ME","lat":null,"lon":null,"points":25},{"id":"md-inner-harbor-/-fort-mchenry","name":"Inner Harbor / Fort McHenry","category":"landmark","subcategory":"Historic Site","state":"MD","lat":null,"lon":null,"points":25},{"id":"ma-freedom-trail-/-fenway-park","name":"Freedom Trail / Fenway Park","category":"landmark","subcategory":"Historic / Sports","state":"MA","lat":null,"lon":null,"points":25},{"id":"mi-mackinac-island-/-pictured-rocks","name":"Mackinac Island / Pictured Rocks","category":"landmark","subcategory":"Island / National Lakeshore","state":"MI","lat":null,"lon":null,"points":25},{"id":"mn-mall-of-america","name":"Mall of America","category":"landmark","subcategory":"Mall / Attraction","state":"MN","lat":null,"lon":null,"points":25},{"id":"ms-elvis-presley-birthplace","name":"Elvis Presley Birthplace","category":"landmark","subcategory":"Historic Site","state":"MS","lat":null,"lon":null,"points":25},{"id":"mo-gateway-arch","name":"Gateway Arch","category":"landmark","subcategory":"Landmark","state":"MO","lat":null,"lon":null,"points":25},{"id":"mt-glacier-national-park","name":"Glacier National Park","category":"landmark","subcategory":"National Park","state":"MT","lat":null,"lon":null,"points":25},{"id":"ne-chimney-rock","name":"Chimney Rock","category":"landmark","subcategory":"Historic Landmark","state":"NE","lat":null,"lon":null,"points":25},{"id":"nv-las-vegas-strip","name":"Las Vegas Strip","category":"landmark","subcategory":"Entertainment","state":"NV","lat":null,"lon":null,"points":25},{"id":"nh-mount-washington","name":"Mount Washington","category":"landmark","subcategory":"Mountain","state":"NH","lat":null,"lon":null,"points":25},{"id":"nj-atlantic-city-boardwalk","name":"Atlantic City Boardwalk","category":"landmark","subcategory":"Beach / Boardwalk","state":"NJ","lat":null,"lon":null,"points":25},{"id":"nm-carlsbad-caverns-national-park","name":"Carlsbad Caverns National Park","category":"landmark","subcategory":"National Park","state":"NM","lat":null,"lon":null,"points":25},{"id":"ny-statue-of-liberty-/-empire-state-buildin","name":"Statue of Liberty / Empire State Building","category":"landmark","subcategory":"Landmark","state":"NY","lat":null,"lon":null,"points":25},{"id":"nc-biltmore-estate","name":"Biltmore Estate","category":"landmark","subcategory":"Historic Site","state":"NC","lat":null,"lon":null,"points":25},{"id":"nd-theodore-roosevelt-national-park","name":"Theodore Roosevelt National Park","category":"landmark","subcategory":"National Park","state":"ND","lat":null,"lon":null,"points":25},{"id":"oh-rock-and-roll-hall-of-fame","name":"Rock and Roll Hall of Fame","category":"landmark","subcategory":"Museum","state":"OH","lat":null,"lon":null,"points":25},{"id":"ok-oklahoma-city-national-memorial","name":"Oklahoma City National Memorial","category":"landmark","subcategory":"Historic Site","state":"OK","lat":null,"lon":null,"points":25},{"id":"or-crater-lake-national-park","name":"Crater Lake National Park","category":"landmark","subcategory":"National Park","state":"OR","lat":null,"lon":null,"points":25},{"id":"pa-independence-hall-/-gettysburg","name":"Independence Hall / Gettysburg","category":"landmark","subcategory":"Historic Site","state":"PA","lat":null,"lon":null,"points":25},{"id":"ri-newport-mansions","name":"Newport Mansions","category":"landmark","subcategory":"Historic Site","state":"RI","lat":null,"lon":null,"points":25},{"id":"sc-charleston-historic-district","name":"Charleston Historic District","category":"landmark","subcategory":"Historic District","state":"SC","lat":null,"lon":null,"points":25},{"id":"sd-mount-rushmore-national-memorial","name":"Mount Rushmore National Memorial","category":"landmark","subcategory":"National Memorial","state":"SD","lat":null,"lon":null,"points":25},{"id":"tn-graceland","name":"Graceland","category":"landmark","subcategory":"Historic Site","state":"TN","lat":null,"lon":null,"points":25},{"id":"tx-the-alamo-/-san-antonio-river-walk","name":"The Alamo / San Antonio River Walk","category":"landmark","subcategory":"Historic Site","state":"TX","lat":null,"lon":null,"points":25},{"id":"ut-zion-national-park","name":"Zion National Park","category":"landmark","subcategory":"National Park","state":"UT","lat":null,"lon":null,"points":25},{"id":"vt-lake-champlain","name":"Lake Champlain","category":"landmark","subcategory":"Lake","state":"VT","lat":null,"lon":null,"points":25},{"id":"va-colonial-williamsburg","name":"Colonial Williamsburg","category":"landmark","subcategory":"Historic Site","state":"VA","lat":null,"lon":null,"points":25},{"id":"wa-space-needle-/-mount-rainier","name":"Space Needle / Mount Rainier","category":"landmark","subcategory":"Landmark / National Park","state":"WA","lat":null,"lon":null,"points":25},{"id":"wv-new-river-gorge-national-park","name":"New River Gorge National Park","category":"landmark","subcategory":"National Park","state":"WV","lat":null,"lon":null,"points":25},{"id":"wi-lambeau-field","name":"Lambeau Field","category":"landmark","subcategory":"Sports","state":"WI","lat":null,"lon":null,"points":25},{"id":"wy-yellowstone-national-park","name":"Yellowstone National Park","category":"landmark","subcategory":"National Park","state":"WY","lat":null,"lon":null,"points":25},{"id":"dc-national-mall-/-lincoln-memorial","name":"National Mall / Lincoln Memorial","category":"landmark","subcategory":"Landmark","state":"DC","lat":null,"lon":null,"points":25},{"id":"al-cheaha-mountain","name":"Cheaha Mountain","category":"landmark","subcategory":"high point","state":"AL","lat":null,"lon":null,"points":50},{"id":"ak-denali","name":"Denali","category":"landmark","subcategory":"high point","state":"AK","lat":null,"lon":null,"points":50},{"id":"az-humphreys-peak","name":"Humphreys Peak","category":"landmark","subcategory":"high point","state":"AZ","lat":null,"lon":null,"points":50},{"id":"ar-magazine-mountain","name":"Magazine Mountain","category":"landmark","subcategory":"high point","state":"AR","lat":null,"lon":null,"points":50},{"id":"ca-mount-whitney","name":"Mount Whitney","category":"landmark","subcategory":"high point","state":"CA","lat":null,"lon":null,"points":50},{"id":"co-mount-elbert","name":"Mount Elbert","category":"landmark","subcategory":"high point","state":"CO","lat":null,"lon":null,"points":50},{"id":"ct-mount-frissell","name":"Mount Frissell","category":"landmark","subcategory":"high point","state":"CT","lat":null,"lon":null,"points":50},{"id":"de-ebright-azimuth","name":"Ebright Azimuth","category":"landmark","subcategory":"high point","state":"DE","lat":null,"lon":null,"points":50},{"id":"fl-britton-hill","name":"Britton Hill","category":"landmark","subcategory":"high point","state":"FL","lat":null,"lon":null,"points":50},{"id":"ga-brasstown-bald","name":"Brasstown Bald","category":"landmark","subcategory":"high point","state":"GA","lat":null,"lon":null,"points":50},{"id":"hi-mauna-kea","name":"Mauna Kea","category":"landmark","subcategory":"high point","state":"HI","lat":null,"lon":null,"points":50},{"id":"id-borah-peak","name":"Borah Peak","category":"landmark","subcategory":"high point","state":"ID","lat":null,"lon":null,"points":50},{"id":"il-charles-mound","name":"Charles Mound","category":"landmark","subcategory":"high point","state":"IL","lat":null,"lon":null,"points":50},{"id":"in-hoosier-hill","name":"Hoosier Hill","category":"landmark","subcategory":"high point","state":"IN","lat":null,"lon":null,"points":50},{"id":"ia-hawkeye-point","name":"Hawkeye Point","category":"landmark","subcategory":"high point","state":"IA","lat":null,"lon":null,"points":50},{"id":"ks-mount-sunflower","name":"Mount Sunflower","category":"landmark","subcategory":"high point","state":"KS","lat":null,"lon":null,"points":50},{"id":"ky-black-mountain","name":"Black Mountain","category":"landmark","subcategory":"high point","state":"KY","lat":null,"lon":null,"points":50},{"id":"la-driskill-mountain","name":"Driskill Mountain","category":"landmark","subcategory":"high point","state":"LA","lat":null,"lon":null,"points":50},{"id":"me-mount-katahdin","name":"Mount Katahdin","category":"landmark","subcategory":"high point","state":"ME","lat":null,"lon":null,"points":50},{"id":"md-hoye-crest","name":"Hoye-Crest","category":"landmark","subcategory":"high point","state":"MD","lat":null,"lon":null,"points":50},{"id":"ma-mount-greylock","name":"Mount Greylock","category":"landmark","subcategory":"high point","state":"MA","lat":null,"lon":null,"points":50},{"id":"mi-mount-arvon","name":"Mount Arvon","category":"landmark","subcategory":"high point","state":"MI","lat":null,"lon":null,"points":50},{"id":"mn-eagle-mountain","name":"Eagle Mountain","category":"landmark","subcategory":"high point","state":"MN","lat":null,"lon":null,"points":50},{"id":"ms-woodall-mountain","name":"Woodall Mountain","category":"landmark","subcategory":"high point","state":"MS","lat":null,"lon":null,"points":50},{"id":"mo-taum-sauk-mountain","name":"Taum Sauk Mountain","category":"landmark","subcategory":"high point","state":"MO","lat":null,"lon":null,"points":50},{"id":"mt-granite-peak","name":"Granite Peak","category":"landmark","subcategory":"high point","state":"MT","lat":null,"lon":null,"points":50},{"id":"ne-panorama-point","name":"Panorama Point","category":"landmark","subcategory":"high point","state":"NE","lat":null,"lon":null,"points":50},{"id":"nv-boundary-peak","name":"Boundary Peak","category":"landmark","subcategory":"high point","state":"NV","lat":null,"lon":null,"points":50},{"id":"nj-high-point","name":"High Point","category":"landmark","subcategory":"high point","state":"NJ","lat":null,"lon":null,"points":50},{"id":"nm-wheeler-peak","name":"Wheeler Peak","category":"landmark","subcategory":"high point","state":"NM","lat":null,"lon":null,"points":50},{"id":"ny-mount-marcy","name":"Mount Marcy","category":"landmark","subcategory":"high point","state":"NY","lat":null,"lon":null,"points":50},{"id":"nc-mount-mitchell","name":"Mount Mitchell","category":"landmark","subcategory":"high point","state":"NC","lat":null,"lon":null,"points":50},{"id":"nd-white-butte","name":"White Butte","category":"landmark","subcategory":"high point","state":"ND","lat":null,"lon":null,"points":50},{"id":"oh-campbell-hill","name":"Campbell Hill","category":"landmark","subcategory":"high point","state":"OH","lat":null,"lon":null,"points":50},{"id":"ok-black-mesa","name":"Black Mesa","category":"landmark","subcategory":"high point","state":"OK","lat":null,"lon":null,"points":50},{"id":"or-mount-hood","name":"Mount Hood","category":"landmark","subcategory":"high point","state":"OR","lat":null,"lon":null,"points":50},{"id":"pa-mount-davis","name":"Mount Davis","category":"landmark","subcategory":"high point","state":"PA","lat":null,"lon":null,"points":50},{"id":"ri-jerimoth-hill","name":"Jerimoth Hill","category":"landmark","subcategory":"high point","state":"RI","lat":null,"lon":null,"points":50},{"id":"sc-sassafras-mountain","name":"Sassafras Mountain","category":"landmark","subcategory":"high point","state":"SC","lat":null,"lon":null,"points":50},{"id":"sd-black-elk-peak","name":"Black Elk Peak","category":"landmark","subcategory":"high point","state":"SD","lat":null,"lon":null,"points":50},{"id":"tn-clingmans-dome","name":"Clingmans Dome","category":"landmark","subcategory":"high point","state":"TN","lat":null,"lon":null,"points":50},{"id":"tx-guadalupe-peak","name":"Guadalupe Peak","category":"landmark","subcategory":"high point","state":"TX","lat":null,"lon":null,"points":50},{"id":"ut-kings-peak","name":"Kings Peak","category":"landmark","subcategory":"high point","state":"UT","lat":null,"lon":null,"points":50},{"id":"vt-mount-mansfield","name":"Mount Mansfield","category":"landmark","subcategory":"high point","state":"VT","lat":null,"lon":null,"points":50},{"id":"va-mount-rogers","name":"Mount Rogers","category":"landmark","subcategory":"high point","state":"VA","lat":null,"lon":null,"points":50},{"id":"wa-mount-rainier","name":"Mount Rainier","category":"landmark","subcategory":"high point","state":"WA","lat":null,"lon":null,"points":50},{"id":"wv-spruce-knob","name":"Spruce Knob","category":"landmark","subcategory":"high point","state":"WV","lat":null,"lon":null,"points":50},{"id":"wi-timms-hill","name":"Timms Hill","category":"landmark","subcategory":"high point","state":"WI","lat":null,"lon":null,"points":50},{"id":"wy-gannett-peak","name":"Gannett Peak","category":"landmark","subcategory":"high point","state":"WY","lat":null,"lon":null,"points":50},{"id":"dc-point-reno","name":"Point Reno","category":"landmark","subcategory":"high point","state":"DC","lat":null,"lon":null,"points":50},{"id":"whataburger","name":"Whataburger","category":"food","subcategory":"Burger","state":"","lat":null,"lon":null,"points":20},{"id":"bojangles","name":"Bojangles","category":"food","subcategory":"Chicken + Biscuits","state":"","lat":null,"lon":null,"points":20},{"id":"waffle-house","name":"Waffle House","category":"food","subcategory":"Diner","state":"","lat":null,"lon":null,"points":20},{"id":"in-n-out-burger","name":"In-N-Out Burger","category":"food","subcategory":"Burger","state":"","lat":null,"lon":null,"points":20},{"id":"culver's","name":"Culver's","category":"food","subcategory":"Burger + Custard","state":"","lat":null,"lon":null,"points":20},{"id":"skyline-chili","name":"Skyline Chili","category":"food","subcategory":"Chili","state":"","lat":null,"lon":null,"points":20},{"id":"portillo's","name":"Portillo's","category":"food","subcategory":"Italian Beef / Hot Dog","state":"","lat":null,"lon":null,"points":20},{"id":"cook-out","name":"Cook Out","category":"food","subcategory":"Fast Food","state":"","lat":null,"lon":null,"points":20},{"id":"biscuitville","name":"Biscuitville","category":"food","subcategory":"Breakfast","state":"","lat":null,"lon":null,"points":20},{"id":"braum's","name":"Braum's","category":"food","subcategory":"Burger + Dairy","state":"","lat":null,"lon":null,"points":20},{"id":"runza","name":"Runza","category":"food","subcategory":"Sandwich","state":"","lat":null,"lon":null,"points":20},{"id":"mighty-taco","name":"Mighty Taco","category":"food","subcategory":"Tacos","state":"","lat":null,"lon":null,"points":20},{"id":"pal's","name":"Pal's","category":"food","subcategory":"Burgers","state":"","lat":null,"lon":null,"points":20}];
+
+// [column, row] of each state on the tile map
+const GRID = {AK:[1,1],ME:[11,1],VT:[10,2],NH:[11,2],WA:[1,3],ID:[2,3],MT:[3,3],ND:[4,3],MN:[5,3],IL:[6,3],WI:[7,3],MI:[8,3],NY:[9,3],RI:[10,3],MA:[11,3],OR:[1,4],NV:[2,4],WY:[3,4],SD:[4,4],IA:[5,4],IN:[6,4],OH:[7,4],PA:[8,4],NJ:[9,4],CT:[10,4],CA:[1,5],UT:[2,5],CO:[3,5],NE:[4,5],MO:[5,5],KY:[6,5],WV:[7,5],VA:[8,5],MD:[9,5],DE:[10,5],AZ:[2,6],NM:[3,6],KS:[4,6],AR:[5,6],TN:[6,6],NC:[7,6],SC:[8,6],DC:[9,6],OK:[4,7],LA:[5,7],MS:[6,7],AL:[7,7],GA:[8,7],HI:[1,8],TX:[4,8],FL:[9,8]};
+const NAMES = {AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",DC:"District of Columbia",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"};
+const CAT_LABEL = { national_park: "Parks", state_park: "Parks", landmark: "Landmarks", food: "Food" };
+const catLabel = c => CAT_LABEL[c] || (c ? c.charAt(0).toUpperCase() + c.slice(1).replace(/_/g, " ") : "Other");
+
+const S = { user: null, profile: null, tab: "auth", pois: [], visits: new Map(), local: true, sample: false,
+            filter: { cat: "all", state: "", q: "" }, coords: null, board: [], fresh: null, limit: 120 };
+let byId = new Map();
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = n => (n || 0).toLocaleString("en-US");
+const fmtDate = iso => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+let toastTimer;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 3500); }
+
+/* ---------- data ---------- */
+async function loadPois() {
+  let rows = [];
+  if (sb) {
+    try {
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await sb.from("pois").select("id,name,category,subcategory,state,lat,lon,points").order("state").order("name").range(from, from + 999);
+        if (error) throw error;
+        rows = rows.concat(data);
+        if (data.length < 1000) break;
+      }
+    } catch (e) { console.warn("Could not load pois", e); rows = []; }
   }
-  render();
+  S.sample = rows.length === 0;
+  S.pois = S.sample ? SAMPLE_POIS : rows;
+  S.pois.sort((a, b) => (a.state || "~").localeCompare(b.state || "~") || a.name.localeCompare(b.name));
+  byId = new Map(S.pois.map(p => [p.id, p]));
 }
 async function ensureProfile() {
-  if (!state.user) return;
-  const { data } = await supabase.from("profiles").select("id").eq("id", state.user.id).maybeSingle();
-  if (!data) {
-    await supabase.from("profiles").insert({ id: state.user.id, username: state.user.email?.split("@")[0] });
-  }
+  try {
+    const { data } = await sb.from("profiles").select("id").eq("id", S.user.id).maybeSingle();
+    if (!data) await sb.from("profiles").insert({ id: S.user.id, username: S.user.email?.split("@")[0] });
+  } catch (e) { console.warn(e); }
 }
 async function loadProfile() {
-  const { data } = await supabase.from("profiles").select("*").eq("id", state.user.id).single();
-  state.profile = data || { total_points: 0, visited_count: 0 };
+  const { data } = await sb.from("profiles").select("*").eq("id", S.user.id).maybeSingle();
+  S.profile = data || { username: S.user.email?.split("@")[0], total_points: 0, visited_count: 0 };
 }
-function render() {
-  const content = document.getElementById("content");
-  const title = document.getElementById("header-title");
-  if (state.currentTab === "auth") {
-    title.textContent = "Travel Trak";
-    content.innerHTML = `<div class="onboard"><div class="avatar">🗺️</div><h2>Sign in</h2><input id="email" type="email" placeholder="Email" autocomplete="email"><input id="password" type="password" placeholder="Password" autocomplete="current-password"><button class="btn" onclick="signIn()">Sign In</button><button class="btn" style="background:#34c759;" onclick="signUp()">Create Account</button><div id="auth-error" class="error"></div><div class="hint"><strong>If sign-up does nothing:</strong><br>1. Check your email for a confirmation link<br>2. In Supabase → Authentication → Providers → Email, turn <em>Confirm email</em> off for testing</div></div>`;
+async function loadBoard() {
+  try {
+    const { data } = await sb.from("profiles").select("id,username,display_name,total_points,visited_count").order("total_points", { ascending: false }).limit(10);
+    S.board = data || [];
+  } catch { S.board = []; }
+}
+async function loadVisits() {
+  S.visits = new Map();
+  if (S.local) { const o = lsGet("tt_visits", {}); for (const k in o) S.visits.set(k, o[k]); return; }
+  const { data } = await sb.from("visits").select("poi_id,visited_at");
+  (data || []).forEach(v => S.visits.set(v.poi_id, v.visited_at));
+}
+async function boot() {
+  await loadPois();
+  S.local = !S.user || S.sample;
+  if (!S.local) { await ensureProfile(); await loadProfile(); await loadBoard(); }
+  await loadVisits();
+}
+function totals() {
+  if (!S.local && S.profile) return { pts: S.profile.total_points || 0, n: S.profile.visited_count || 0 };
+  let pts = 0, n = 0;
+  for (const id of S.visits.keys()) { const p = byId.get(id); if (p) { pts += p.points || 0; n++; } }
+  return { pts, n };
+}
+function stateStats() {
+  const m = {};
+  for (const p of S.pois) {
+    if (!GRID[p.state]) continue;
+    const s = m[p.state] || (m[p.state] = { t: 0, v: 0 });
+    s.t++; if (S.visits.has(p.id)) s.v++;
+  }
+  return m;
+}
+const level = s => { if (!s || !s.v) return 0; const r = s.v / s.t; return r < 0.34 ? 1 : r < 0.67 ? 2 : 3; };
+
+/* ---------- visits ---------- */
+async function toggle(id) {
+  const p = byId.get(id); if (!p) return;
+  const had = S.visits.has(id), old = S.visits.get(id), dir = had ? -1 : 1;
+  const bump = d => { if (!S.local && S.profile) { S.profile.total_points = Math.max(0, (S.profile.total_points || 0) + d * (p.points || 0)); S.profile.visited_count = Math.max(0, (S.profile.visited_count || 0) + d); } };
+  if (had) S.visits.delete(id); else { S.visits.set(id, new Date().toISOString()); S.fresh = id; }
+  bump(dir);
+  if (S.local) { lsSet("tt_visits", Object.fromEntries(S.visits)); refresh(); return; }
+  refresh();
+  const { error } = had
+    ? await sb.from("visits").delete().eq("poi_id", id).eq("user_id", S.user.id)
+    : await sb.from("visits").insert({ poi_id: id, points_awarded: p.points || 0 });
+  if (error) {
+    if (had) S.visits.set(id, old); else S.visits.delete(id);
+    bump(-dir); S.fresh = null; refresh();
+    toast((had ? "Couldn't remove that visit: " : "Couldn't save that visit: ") + error.message);
     return;
   }
-  title.textContent = "Travel Trak";
-  const pts = state.profile?.total_points || 0;
-  const vis = state.profile?.visited_count || 0;
-  content.innerHTML = `<div class="stats"><div class="stat"><div class="num">${pts.toLocaleString()}</div><div class="label">points</div></div><div class="stat"><div class="num">${vis}</div><div class="label">visited</div></div></div><div class="list-item"><div>Signed in</div><div>${state.user?.email || ""}</div></div><button class="btn" onclick="signOut()">Sign Out</button>`;
+  await loadProfile(); refresh();
 }
+
+/* ---------- rendering ---------- */
+function renderHeader() {
+  const el = $("hdr-pts");
+  if (S.tab === "auth") { el.hidden = true; return; }
+  el.hidden = false; el.textContent = fmt(totals().pts) + " pts";
+}
+function gridHTML(interactive) {
+  const stats = interactive ? stateStats() : {};
+  return `<div class="grid" ${interactive ? 'role="group" aria-label="States you have stamped"' : 'aria-hidden="true"'}>` +
+    Object.entries(GRID).map(([ab, [c, r]]) => {
+      const s = stats[ab], lv = level(s), pos = `style="grid-column:${c};grid-row:${r}"`;
+      if (!interactive) return `<span class="tile" ${pos}>${ab}</span>`;
+      const label = `${NAMES[ab]}: ${s ? `${s.v} of ${s.t} places stamped` : "no places loaded yet"}`;
+      return `<button class="tile l${lv}" ${pos} data-act="state" data-state="${ab}" aria-label="${esc(label)}" title="${esc(label)}">${ab}</button>`;
+    }).join("") + `</div>`;
+}
+const legendHTML = `<div class="legend" aria-hidden="true">Fewer stamps <i style="background:var(--l0)"></i><i style="background:var(--l1)"></i><i style="background:var(--l2)"></i><i style="background:var(--l3)"></i> More</div>`;
+const bannerHTML = () => S.sample ? `<div class="banner">You're looking at sample places, and stamps are saved on this device only. Load the full list with <b>supabase/import_pois.py</b> to sync them to your account.</div>` : "";
+
+function render() {
+  const c = $("content");
+  $("tabs").hidden = S.tab === "auth";
+  document.querySelectorAll(".tab").forEach(t => { if (t.dataset.tab === S.tab) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current"); });
+  renderHeader();
+  if (S.tab === "auth") return renderAuth(c);
+  if (S.tab === "home") c.innerHTML = homeHTML();
+  if (S.tab === "explore") { c.innerHTML = exploreHTML(); renderList(); }
+  if (S.tab === "nearby") { c.innerHTML = nearbyHTML(); renderNear(); }
+  if (S.tab === "profile") c.innerHTML = profileHTML();
+}
+function refresh() {
+  renderHeader();
+  if (S.tab === "explore") renderList();
+  else if (S.tab === "nearby") renderNear();
+  else render();
+}
+
+function renderAuth(c) {
+  c.innerHTML = `<div class="auth">
+    <h1>Stamp every place you visit</h1>
+    <p class="sub">Parks, landmarks and regional meals across the US. Each one is worth points, and every state fills in as you go.</p>
+    ${gridHTML(false)}
+    <form id="auth-form" data-act-submit="signin" novalidate>
+      <label>Email<input id="email" type="email" autocomplete="email" inputmode="email"></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password"></label>
+      <div class="msg" id="auth-msg" role="alert"></div>
+      <button class="btn" type="submit">Sign in</button>
+      <button class="btn alt" type="button" data-act="signup">Create account</button>
+    </form>
+    <button class="linkish" data-act="demo">Look around without an account</button>
+  </div>`;
+}
+
+function homeHTML() {
+  const stats = stateStats(), t = totals();
+  const stamped = Object.values(stats).filter(s => s.v).length;
+  const recent = [...S.visits.entries()].filter(([id]) => byId.has(id)).sort((a, b) => b[1].localeCompare(a[1])).slice(0, 5);
+  return `${bannerHTML()}
+    <h1>${stamped} of 51 states stamped</h1>
+    <p class="sub">Tap a state to see its places.</p>
+    ${gridHTML(true)}${legendHTML}
+    <div class="stats">
+      <div class="stat"><div class="num">${fmt(t.pts)}</div><div class="label">points</div></div>
+      <div class="stat"><div class="num">${fmt(t.n)}</div><div class="label">places</div></div>
+      <div class="stat"><div class="num">${stamped}</div><div class="label">states</div></div>
+    </div>
+    <h2>Latest stamps</h2>
+    ${recent.length ? `<ul class="list recent">${recent.map(([id, when]) => { const p = byId.get(id); return `<li class="poi" data-cat="${esc(p.category)}"><div><div class="poi-name">${esc(p.name)}</div><div class="poi-meta"><span>${esc(NAMES[p.state] || catLabel(p.category))}</span></div></div><span class="stamp"><span>Visited<br><small>${fmtDate(when)}</small></span></span></li>`; }).join("")}</ul>`
+      : `<div class="empty"><strong>No stamps yet</strong>Open Explore and mark the first place you've been.</div>`}`;
+}
+
+function exploreHTML() {
+  const cats = [...new Set(S.pois.map(p => catLabel(p.category)))];
+  const f = S.filter;
+  const states = [...new Set(S.pois.map(p => p.state).filter(Boolean))].sort((a, b) => (NAMES[a] || a).localeCompare(NAMES[b] || b));
+  return `${bannerHTML()}<div class="filters">
+    <input id="q" type="search" placeholder="Search places" aria-label="Search places" value="${esc(f.q)}">
+    <select id="stateSel" aria-label="State"><option value="">All states</option>${states.map(s => `<option value="${s}" ${f.state === s ? "selected" : ""}>${esc(NAMES[s] || s)}</option>`).join("")}</select>
+    <div class="chips" role="group" aria-label="Category">
+      ${["All", ...cats].map(l => `<button class="chip" data-act="chip" data-cat="${esc(l)}" aria-pressed="${(f.cat === "all" ? "All" : f.cat) === l}">${esc(l)}</button>`).join("")}
+    </div></div><div id="list"></div>`;
+}
+function poiRow(p, extra = "") {
+  const when = S.visits.get(p.id);
+  const side = when
+    ? `<button class="stamp-btn" data-act="toggle" data-id="${esc(p.id)}" aria-label="Visited ${fmtDate(when)}. Remove visit"><span class="stamp ${S.fresh === p.id ? "fresh" : ""}"><span>Visited<br><small>${fmtDate(when)}</small></span></span></button>`
+    : `<button class="mark" data-act="toggle" data-id="${esc(p.id)}" aria-label="Mark ${esc(p.name)} as visited">Mark visited</button>`;
+  return `<li class="poi" data-cat="${esc(p.category)}"><div><div class="poi-name">${esc(p.name)}</div>
+    <div class="poi-meta"><span>${esc(catLabel(p.category))}</span>${p.state ? `<span>${esc(NAMES[p.state] || p.state)}</span>` : ""}${extra}</div></div>
+    <div class="poi-side">${side}<span class="pts">${p.points || 0} pts</span></div></li>`;
+}
+function renderList() {
+  const f = S.filter, q = f.q.trim().toLowerCase();
+  const rows = S.pois.filter(p => (f.cat === "all" || catLabel(p.category) === f.cat) && (!f.state || p.state === f.state) && (!q || p.name.toLowerCase().includes(q) || (NAMES[p.state] || "").toLowerCase().includes(q)));
+  const el = $("list"); if (!el) return;
+  if (!rows.length) { el.innerHTML = `<div class="empty"><strong>No places match</strong>Try a different state or clear the search.</div>`; return; }
+  const shown = rows.slice(0, S.limit);
+  let html = "", last = null;
+  for (const p of shown) {
+    if (!f.state && p.state !== last) { if (last !== null) html += "</ul>"; last = p.state; html += `<h3 class="group">${esc(NAMES[p.state] || "Anywhere in the US")}</h3><ul class="list">`; }
+    else if (f.state && last === null) { last = p.state; html += `<ul class="list">`; }
+    html += poiRow(p);
+  }
+  html += "</ul>";
+  if (rows.length > shown.length) html += `<button class="btn alt" data-act="more">Show more (${rows.length - shown.length} left)</button>`;
+  el.innerHTML = html;
+  S.fresh = null;
+}
+
+const miles = (a, b, c, d) => { const R = 3958.8, r = x => x * Math.PI / 180, dl = r(c - a), dn = r(d - b); const h = Math.sin(dl / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+function nearbyHTML() {
+  return `${bannerHTML()}<h1>Near you</h1><p class="sub">The closest places to your current location. Only places with map coordinates are listed, which is parks for now.</p>
+    <button class="btn" id="locate" data-act="locate">${S.coords ? "Update my location" : "Find places near me"}</button>
+    <div class="msg" id="geo-msg" role="alert" style="margin-top:8px"></div><div id="near"></div>`;
+}
+function renderNear() {
+  const el = $("near"); if (!el || !S.coords) return;
+  const rows = S.pois.filter(p => p.lat != null && p.lon != null).map(p => ({ p, d: miles(S.coords.lat, S.coords.lon, p.lat, p.lon) })).sort((a, b) => a.d - b.d).slice(0, 20);
+  el.innerHTML = rows.length ? `<ul class="list">${rows.map(({ p, d }) => poiRow(p, `<span>${d < 10 ? d.toFixed(1) : Math.round(d)} mi away</span>`)).join("")}</ul>`
+    : `<div class="empty"><strong>Nothing to show yet</strong>None of the loaded places have coordinates.</div>`;
+  S.fresh = null;
+}
+
+function profileHTML() {
+  const t = totals(), name = S.profile?.display_name || S.profile?.username || S.user?.email?.split("@")[0] || "Guest";
+  const board = S.board.length ? `<h2>Leaderboard</h2><ol class="board">${S.board.map((b, i) => `<li class="${b.id === S.user?.id ? "me-row" : ""}"><span class="rank">${i + 1}</span><span>${esc(b.display_name || b.username || "Traveler")}</span><span>${fmt(b.total_points)} pts</span></li>`).join("")}</ol>` : "";
+  return `${bannerHTML()}<div class="me"><div class="avatar" aria-hidden="true">${esc(name.charAt(0).toUpperCase())}</div>
+      <div><h1>${esc(name)}</h1><p class="sub" style="margin-top:2px">${S.user ? esc(S.user.email) : "Not signed in. Stamps stay on this device."}</p></div></div>
+    <div class="stats"><div class="stat"><div class="num">${fmt(t.pts)}</div><div class="label">points</div></div><div class="stat"><div class="num">${fmt(t.n)}</div><div class="label">places</div></div><div class="stat"><div class="num">${Object.values(stateStats()).filter(s => s.v).length}</div><div class="label">states</div></div></div>
+    ${board}
+    <button class="btn alt" data-act="${S.user ? "signout" : "leave"}" style="margin-top:24px">${S.user ? "Sign out" : "Sign in or create an account"}</button>`;
+}
+
+/* ---------- auth ---------- */
+function authMsg(text, kind) { const m = $("auth-msg"); if (m) { m.textContent = text; m.className = "msg " + (kind || ""); } }
+const creds = () => ({ email: $("email").value.trim(), password: $("password").value });
+async function enter(user) { S.user = user; S.fresh = null; await boot(); S.tab = "home"; render(); window.scrollTo(0, 0); }
 async function signIn() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const errEl = document.getElementById("auth-error");
-  errEl.textContent = "Signing in...";
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) { errEl.textContent = error.message; return; }
-  state.user = data.user;
-  await ensureProfile();
-  await loadProfile();
-  state.currentTab = "dashboard";
-  document.getElementById("tabs").style.display = "flex";
-  render();
+  if (!sb) return authMsg("Sign-in isn't available right now. You can still look around.", "err");
+  const { email, password } = creds();
+  if (!email || !password) return authMsg("Enter your email and password.", "err");
+  authMsg("Signing in…");
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) return authMsg(error.message, "err");
+  await enter(data.user);
 }
 async function signUp() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const errEl = document.getElementById("auth-error");
-  errEl.textContent = "Creating account...";
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) { errEl.textContent = error.message; return; }
-  if (data.user && !data.session) {
-    errEl.textContent = "Account created. Check your email to confirm, then sign in.";
-  } else if (data.session) {
-    state.user = data.user;
-    await ensureProfile();
-    await loadProfile();
-    state.currentTab = "dashboard";
-    document.getElementById("tabs").style.display = "flex";
-    render();
+  if (!sb) return authMsg("Accounts aren't available right now. You can still look around.", "err");
+  const { email, password } = creds();
+  if (!email || !password) return authMsg("Enter an email and a password to create your account.", "err");
+  if (password.length < 6) return authMsg("Use a password with at least 6 characters.", "err");
+  authMsg("Creating your account…");
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if (error) return authMsg(error.message, "err");
+  if (data.user && !data.session) return authMsg("Account created. Confirm it from the email we sent, then sign in.", "ok");
+  await enter(data.user);
+}
+async function signOut() { if (sb) await sb.auth.signOut(); S.user = null; S.profile = null; S.board = []; S.tab = "auth"; render(); }
+
+/* ---------- events ---------- */
+document.addEventListener("click", async e => {
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  const a = el.dataset.act;
+  if (a === "tab") { S.tab = el.dataset.tab; render(); window.scrollTo(0, 0); }
+  else if (a === "toggle") toggle(el.dataset.id);
+  else if (a === "state") { S.filter = { cat: "all", state: el.dataset.state, q: "" }; S.limit = 120; S.tab = "explore"; render(); window.scrollTo(0, 0); }
+  else if (a === "chip") { S.filter.cat = el.dataset.cat === "All" ? "all" : el.dataset.cat; S.limit = 120; render(); }
+  else if (a === "more") { S.limit += 120; renderList(); }
+  else if (a === "signup") signUp();
+  else if (a === "demo") { await enter(null); }
+  else if (a === "signout") signOut();
+  else if (a === "leave") { S.tab = "auth"; render(); }
+  else if (a === "locate") {
+    const msg = $("geo-msg");
+    if (!navigator.geolocation) { msg.textContent = "This browser can't share your location."; msg.className = "msg err"; return; }
+    msg.textContent = "Finding you…"; msg.className = "msg";
+    navigator.geolocation.getCurrentPosition(
+      pos => { S.coords = { lat: pos.coords.latitude, lon: pos.coords.longitude }; render(); },
+      () => { msg.textContent = "Couldn't get your location. Allow location access for this page and try again."; msg.className = "msg err"; },
+      { enableHighAccuracy: false, timeout: 10000 });
   }
-}
-async function signOut() {
-  await supabase.auth.signOut();
-  state.user = null; state.profile = null; state.currentTab = "auth";
-  document.getElementById("tabs").style.display = "none";
-  render();
-}
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    state.currentTab = tab.dataset.tab;
-    render();
-  });
 });
-init();
+document.addEventListener("submit", e => { if (e.target.id === "auth-form") { e.preventDefault(); signIn(); } });
+document.addEventListener("input", e => { if (e.target.id === "q") { S.filter.q = e.target.value; S.limit = 120; renderList(); } });
+document.addEventListener("change", e => { if (e.target.id === "stateSel") { S.filter.state = e.target.value; S.limit = 120; renderList(); } });
+
+(async function init() {
+  if (sb) {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session?.user) return enter(session.user);
+    } catch (e) { console.warn(e); }
+  }
+  render();
+})();
 </script>
 </body>
 </html>
