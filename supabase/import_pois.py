@@ -34,7 +34,7 @@ def import_csv(path, category_map=None, points_default=25):
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for r in reader:
-            name = r.get("name") or r.get("landmark") or r.get("brand")
+            name = r.get("name") or r.get("landmark") or r.get("brand") or r.get("high_point")
             if not name:
                 continue
             state = r.get("state", "")
