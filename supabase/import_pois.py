@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
 Import all Travel Trak CSVs into Supabase pois table.
-Usage:
-  export SUPABASE_URL="https://nwptxncvixkfapbizdgg.supabase.co"
-  export SUPABASE_SERVICE_KEY="sb_secret_..."
-  python supabase/import_pois.py
+Deduplicates by ID before upserting.
 """
 import os
 import csv
@@ -28,13 +25,14 @@ BASE = Path(__file__).parent.parent / "data" / "processed"
 
 def make_id(state, name):
     base = f"{state.lower()}-{name.lower()}" if state else name.lower()
-    return base.replace(" ", "-").replace("/", "-")[:60]
+    return "".join(c if c.isalnum() or c == "-" else "-" for c in base)[:60]
 
 def import_file(path, category, points, name_col="name", state_col="state"):
     path = Path(path)
     if not path.exists():
         print(f"  Missing: {path.name}")
         return 0
+    seen = set()
     rows = []
     with open(path, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
@@ -42,8 +40,12 @@ def import_file(path, category, points, name_col="name", state_col="state"):
             if not name:
                 continue
             state = r.get(state_col, "")
+            poi_id = make_id(state, name)
+            if poi_id in seen:
+                continue
+            seen.add(poi_id)
             rows.append({
-                "id": make_id(state, name),
+                "id": poi_id,
                 "name": name,
                 "category": category,
                 "subcategory": r.get("category") or r.get("poi_type") or "",
@@ -63,29 +65,30 @@ def import_file(path, category, points, name_col="name", state_col="state"):
 def main():
     total = 0
     print("Importing...")
-    total += import_file(BASE / "parks_all.csv", "park", 50)
-    cats = [
-        ("categories/regional_foods.csv", "food", 20, "food"),
-        ("categories/regional_chains.csv", "food", 20, "brand"),
-        ("categories/museums.csv", "museum", 30),
-        ("categories/zoos_aquariums.csv", "zoo", 30),
-        ("categories/breweries.csv", "brewery", 15),
-        ("categories/historic_sites.csv", "historic", 40),
-        ("categories/stadiums.csv", "stadium", 25),
-        ("categories/beaches.csv", "beach", 20),
-        ("categories/lighthouses.csv", "lighthouse", 20),
-        ("categories/state_capitols.csv", "capitol", 30),
-        ("categories/covered_bridges.csv", "bridge", 15),
-        ("categories/botanical_gardens.csv", "garden", 25),
-        ("categories/amusement_parks.csv", "amusement", 40),
-        ("categories/wildlife_refuges.csv", "refuge", 30),
-        ("iconic_landmarks.csv", "landmark", 25, "landmark"),
-        ("parks/state_high_points.csv", "high_point", 50, "high_point"),
+    for p in sorted((BASE / "parks").glob("*_parks.csv")):
+        total += import_file(p, "park", 50)
+    items = [
+        (BASE / "categories/regional_foods.csv", "food", 20, "food"),
+        (BASE / "categories/regional_chains.csv", "food", 20, "brand"),
+        (BASE / "categories/museums.csv", "museum", 30),
+        (BASE / "categories/zoos_aquariums.csv", "zoo", 30),
+        (BASE / "categories/breweries.csv", "brewery", 15),
+        (BASE / "categories/historic_sites.csv", "historic", 40),
+        (BASE / "categories/stadiums.csv", "stadium", 25),
+        (BASE / "categories/beaches.csv", "beach", 20),
+        (BASE / "categories/lighthouses.csv", "lighthouse", 20),
+        (BASE / "categories/state_capitols.csv", "capitol", 30),
+        (BASE / "categories/covered_bridges.csv", "bridge", 15),
+        (BASE / "categories/botanical_gardens.csv", "garden", 25),
+        (BASE / "categories/amusement_parks.csv", "amusement", 40),
+        (BASE / "categories/wildlife_refuges.csv", "refuge", 30),
+        (BASE / "iconic_landmarks.csv", "landmark", 25, "landmark"),
+        (BASE / "parks/state_high_points.csv", "high_point", 50, "high_point"),
     ]
-    for item in cats:
+    for item in items:
         path, cat, pts = item[0], item[1], item[2]
         name_col = item[3] if len(item) > 3 else "name"
-        total += import_file(BASE / path, cat, pts, name_col)
+        total += import_file(path, cat, pts, name_col)
     print(f"\nTotal upserted: {total}")
 
 if __name__ == "__main__":
