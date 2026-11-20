@@ -2,35 +2,14 @@
 
 Last updated: 2026-11-20
 
-## Structure
+## Parks
+- `data/processed/parks_all.csv` — **2,438** state + national parks/monuments across all 50 states + DC
+- Individual state files in `data/processed/parks/*_parks.csv`
 
-```
-data/
-├── raw/                  # Original downloads
-└── processed/            # Cleaned data for the app
-    ├── regional_foods_starter.csv
-    ├── regional_restaurants.csv
-    ├── iconic_landmarks.csv
-    └── parks/
-        ├── *_parks.csv   # 13 states so far
-        └── state_high_points.csv
-```
+## Other
+- `iconic_landmarks.csv` — 51 landmarks
+- `regional_restaurants.csv` — 26 chains
+- `parks/state_high_points.csv` — 51 high points
 
-## Processed Data Catalog
-
-| File | Description | Rows | Status |
-|------|-------------|------|--------|
-| `regional_foods_starter.csv` | Signature regional foods by state | ~70 | Starter |
-| `regional_restaurants.csv` | Regional restaurant chains | 26 | Expanded |
-| `iconic_landmarks.csv` | One iconic landmark per state + DC | 51 | Complete |
-| `parks/state_high_points.csv` | Highest point in each state + DC | 51 | Complete |
-| `parks/*_parks.csv` | State & national parks/monuments | 13 states | In progress |
-
-### Park coverage so far
-AL, CA, FL, GA, KS, LA, NC, NY, OH, PA, TN, TX, VA
-
-## Next Priorities
-1. Finish remaining states for parks
-2. Add county parks
-3. Expand regional foods with more entries
-4. Numbered routes / interstates (from OpenInterstate data)
+## Status
+Parks coverage is complete for all states. Ready for Supabase import.
