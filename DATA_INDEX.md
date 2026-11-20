@@ -3,13 +3,17 @@
 Last updated: 2026-11-20
 
 ## Parks
-- `data/processed/parks_all.csv` — **2,438** state + national parks/monuments across all 50 states + DC
-- Individual state files in `data/processed/parks/*_parks.csv`
+- `parks_all.csv` — 2,438 state + national parks/monuments (all 50 states + DC)
 
-## Other
-- `iconic_landmarks.csv` — 51 landmarks
-- `regional_restaurants.csv` — 26 chains
-- `parks/state_high_points.csv` — 51 high points
+## Categories
+| File | Description | Count |
+|------|-------------|-------|
+| `categories/regional_foods.csv` | Signature foods by state | 51 |
+| `categories/regional_chains.csv` | Regional restaurant chains | 15+ |
+| `categories/museums.csv` | Major museums | 10 |
+| `categories/zoos_aquariums.csv` | Zoos and aquariums | 6 |
+| `iconic_landmarks.csv` | One landmark per state | 51 |
+| `parks/state_high_points.csv` | State high points | 51 |
 
 ## Status
-Parks coverage is complete for all states. Ready for Supabase import.
+Parks complete. Foods, chains, museums, and zoos started. Ready for more categories or Supabase import.
