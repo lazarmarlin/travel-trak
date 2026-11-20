@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Travel Trak</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #1d1d1f; }
-  .app { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; position: relative; }
+  .app { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; }
   header { background: #1d1d1f; color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; }
   .content { padding: 16px; padding-bottom: 80px; }
   .stats { display: flex; gap: 16px; margin-bottom: 20px; }
@@ -15,9 +16,6 @@
   .stat .num { font-size: 28px; font-weight: 700; }
   .stat .label { font-size: 13px; color: #86868b; }
   .list-item { background: #fff; border: 1px solid #e5e5ea; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-  .list-item:active { background: #f5f5f7; }
-  .progress { height: 6px; background: #e5e5ea; border-radius: 3px; margin-top: 6px; }
-  .progress-bar { height: 100%; background: #007aff; border-radius: 3px; }
   .btn { background: #007aff; color: white; border: none; border-radius: 10px; padding: 14px; width: 100%; font-size: 16px; font-weight: 600; margin-top: 12px; }
   .btn:disabled { background: #34c759; }
   .tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; border-top: 1px solid #e5e5ea; display: flex; }
@@ -26,6 +24,8 @@
   .back { color: #007aff; cursor: pointer; }
   .onboard { text-align: center; padding: 40px 20px; }
   .avatar { width: 80px; height: 80px; border-radius: 50%; background: #007aff; color: white; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 16px; }
+  input { width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 8px; margin: 8px 0; font-size: 16px; }
+  .error { color: #ff3b30; font-size: 13px; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -35,80 +35,108 @@
   <nav class="tabs" id="tabs">
     <div class="tab active" data-tab="dashboard">Dashboard</div>
     <div class="tab" data-tab="explore">Explore</div>
-    <div class="tab" data-tab="nearby">Nearby</div>
     <div class="tab" data-tab="leaderboard">Board</div>
   </nav>
 </div>
 <script>
-const RAW = "https://raw.githubusercontent.com/lazarmarlin/travel-trak/main/";
-const state = { points: 12450, visited: 87, currentTab: "onboarding", onboardStep: 0, exploreLevel: "state", selectedState: null, selectedPOI: null, visits: new Set(), parks: {}, landmarks: [], restaurants: [], highPoints: [] };
-async function loadCSV(path) {
-  try {
-    const r = await fetch(RAW + path);
-    if (!r.ok) return [];
-    const text = await r.text();
-    const lines = text.trim().split("\n");
-    const headers = lines[0].split(",");
-    return lines.slice(1).map(line => {
-      const vals = line.split(",");
-      const obj = {};
-      headers.forEach((h, i) => obj[h.trim()] = (vals[i] || "").trim());
-      return obj;
-    });
-  } catch { return []; }
+const SUPABASE_URL = "https://nwptxncvixkfapbizdgg.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_9BTKJegib7EsfvshAWH8hg_78PbUaa8";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const state = { user: null, profile: null, currentTab: "auth", exploreLevel: "state", selectedState: null, selectedPOI: null, pois: [], visits: new Set() };
+async function init() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) { state.user = session.user; await loadProfile(); state.currentTab = "dashboard"; }
+  render();
 }
-async function loadData() {
-  state.landmarks = await loadCSV("data/processed/iconic_landmarks.csv");
-  state.restaurants = await loadCSV("data/processed/regional_restaurants.csv");
-  state.highPoints = await loadCSV("data/processed/parks/state_high_points.csv");
-  for (const st of ["al", "la", "ga", "tn"]) {
-    state.parks[st.toUpperCase()] = await loadCSV(`data/processed/parks/${st}_parks.csv`);
-  }
+async function loadProfile() {
+  const { data } = await supabase.from("profiles").select("*").eq("id", state.user.id).single();
+  state.profile = data || { total_points: 0, visited_count: 0 };
+  const { data: visits } = await supabase.from("visits").select("poi_id").eq("user_id", state.user.id);
+  state.visits = new Set((visits || []).map(v => v.poi_id));
+}
+async function loadPOIs() {
+  const { data } = await supabase.from("pois").select("*").limit(200);
+  state.pois = data || [];
 }
 function render() {
   const content = document.getElementById("content");
   const title = document.getElementById("header-title");
   const tabs = document.getElementById("tabs");
-  if (state.currentTab === "onboarding") {
+  if (state.currentTab === "auth") {
     tabs.style.display = "none";
-    const steps = [{t:"Welcome to Travel Trak",d:"Track every place you visit."},{t:"Explore by State",d:"Browse real POIs."},{t:"Ready?",d:"Data loads from GitHub."}];
-    const s = steps[Math.min(state.onboardStep, steps.length-1)];
-    title.textContent = "";
-    content.innerHTML = `<div class="onboard"><div class="avatar">🗺️</div><h1>${s.t}</h1><p style="color:#86868b;margin:12px 0 24px;">${s.d}</p><button class="btn" onclick="nextOnboard()">${state.onboardStep < 2 ? "Next" : "Get Started"}</button></div>`;
+    title.textContent = "Travel Trak";
+    content.innerHTML = `<div class="onboard"><div class="avatar">🗺️</div><h2>Sign in to Travel Trak</h2><p style="color:#86868b;margin:12px 0;">Points and visits will be saved.</p><input id="email" type="email" placeholder="Email"><input id="password" type="password" placeholder="Password"><button class="btn" onclick="signIn()">Sign In</button><button class="btn" style="background:#34c759;" onclick="signUp()">Create Account</button><div id="auth-error" class="error"></div></div>`;
     return;
   }
   tabs.style.display = "flex";
+  const pts = state.profile?.total_points || 0;
+  const vis = state.profile?.visited_count || 0;
   if (state.currentTab === "dashboard") {
     title.textContent = "Travel Trak";
-    content.innerHTML = `<div class="stats"><div class="stat"><div class="num">${state.points.toLocaleString()}</div><div class="label">points</div></div><div class="stat"><div class="num">${state.visited}</div><div class="label">visited</div></div></div><div style="font-weight:600;margin:16px 0 8px;">Loaded from GitHub</div><div class="list-item"><div>Landmarks</div><div>${state.landmarks.length}</div></div><div class="list-item"><div>Restaurant chains</div><div>${state.restaurants.length}</div></div><div class="list-item"><div>States with parks</div><div>${Object.keys(state.parks).length}</div></div>`;
+    content.innerHTML = `<div class="stats"><div class="stat"><div class="num">${pts.toLocaleString()}</div><div class="label">points</div></div><div class="stat"><div class="num">${vis}</div><div class="label">visited</div></div></div><div class="list-item"><div>Signed in as</div><div>${state.user?.email || "—"}</div></div><button class="btn" onclick="signOut()">Sign Out</button>`;
   } else if (state.currentTab === "explore") {
     if (state.exploreLevel === "state") {
       title.textContent = "Explore";
-      const states = Object.keys(state.parks).sort();
-      content.innerHTML = states.map(st => `<div class="list-item" onclick="selectState('${st}')"><div><strong>${st}</strong></div><div>${(state.parks[st]||[]).length} parks</div></div>`).join("") || "<p>Loading...</p>";
+      const states = [...new Set(state.pois.map(p => p.state))].filter(Boolean).sort();
+      content.innerHTML = states.length ? states.map(st => `<div class="list-item" onclick="selectState('${st}')"><div><strong>${st}</strong></div><div>${state.pois.filter(p=>p.state===st).length} POIs</div></div>`).join("") : `<p style="color:#86868b;">No POIs loaded yet. Add some in the Supabase Table Editor.</p>`;
     } else if (state.exploreLevel === "list") {
       title.innerHTML = `<span class="back" onclick="state.exploreLevel='state';render()">←</span> ${state.selectedState}`;
-      const parks = state.parks[state.selectedState] || [];
-      content.innerHTML = parks.slice(0,25).map(p => `<div class="list-item" onclick="showDetail('${p.name.replace(/'/g,"")}', '${p.poi_type}', 50)"><div><strong>${p.name}</strong><br><small>${p.poi_type}</small></div><div>50 pts</div></div>`).join("") || "<p>No data</p>";
+      const list = state.pois.filter(p => p.state === state.selectedState);
+      content.innerHTML = list.map(p => `<div class="list-item" onclick="showDetail('${p.id}')"><div><strong>${p.name}</strong><br><small>${p.category}</small></div><div>${p.points} pts</div></div>`).join("") || "<p>No POIs</p>";
     } else if (state.exploreLevel === "detail") {
+      const p = state.pois.find(x => x.id === state.selectedPOI) || {};
+      const visited = state.visits.has(p.id);
       title.innerHTML = `<span class="back" onclick="state.exploreLevel='list';render()">←</span> Detail`;
-      const visited = state.visits.has(state.selectedPOI);
-      content.innerHTML = `<h2>${state.selectedPOI}</h2><p style="color:#86868b;margin:8px 0 16px;">${state.selectedType} · ${state.selectedPoints} points</p><button class="btn" ${visited?"disabled":""} onclick="markVisited()">${visited?"Visited ✓":`Mark Visited +${state.selectedPoints}`}</button>`;
+      content.innerHTML = `<h2>${p.name}</h2><p style="color:#86868b;margin:8px 0 16px;">${p.category} · ${p.points} points</p><button class="btn" ${visited?"disabled":""} onclick="markVisited('${p.id}', ${p.points})">${visited ? "Visited ✓" : `Mark Visited +${p.points}`}</button>`;
     }
-  } else if (state.currentTab === "nearby") {
-    title.textContent = "Nearby";
-    content.innerHTML = `<div style="background:#e8f0fe;height:140px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#007aff;margin-bottom:16px;">Location (Capacitor later)</div><div class="list-item"><div>Sample nearby</div><div>50 pts</div></div>`;
   } else if (state.currentTab === "leaderboard") {
     title.textContent = "Leaderboard";
-    content.innerHTML = `<div class="list-item"><div><strong>1. Alex</strong></div><div>18,200</div></div><div class="list-item" style="background:#e8f0fe;"><div><strong>2. You</strong></div><div>${state.points.toLocaleString()}</div></div>`;
+    content.innerHTML = `<p style="color:#86868b;">Leaderboard will query profiles ordered by total_points.</p>`;
   }
 }
-function nextOnboard() { if (state.onboardStep < 2) state.onboardStep++; else { state.currentTab = "dashboard"; loadData().then(render); } render(); }
+async function signIn() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) { document.getElementById("auth-error").textContent = error.message; return; }
+  const { data: { session } } = await supabase.auth.getSession();
+  state.user = session.user;
+  await loadProfile();
+  await loadPOIs();
+  state.currentTab = "dashboard";
+  render();
+}
+async function signUp() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) { document.getElementById("auth-error").textContent = error.message; return; }
+  alert("Check your email to confirm, then sign in.");
+}
+async function signOut() {
+  await supabase.auth.signOut();
+  state.user = null; state.profile = null; state.currentTab = "auth"; render();
+}
 function selectState(st) { state.selectedState = st; state.exploreLevel = "list"; render(); }
-function showDetail(name, type, pts) { state.selectedPOI = name; state.selectedType = type; state.selectedPoints = pts; state.exploreLevel = "detail"; render(); }
-function markVisited() { if (!state.visits.has(state.selectedPOI) && confirm("Mark as visited?")) { state.visits.add(state.selectedPOI); state.points += state.selectedPoints; state.visited++; render(); } }
-document.querySelectorAll(".tab").forEach(tab => { tab.addEventListener("click", () => { document.querySelectorAll(".tab").forEach(t => t.classList.remove("active")); tab.classList.add("active"); state.currentTab = tab.dataset.tab; state.exploreLevel = "state"; render(); }); });
-render();
+function showDetail(id) { state.selectedPOI = id; state.exploreLevel = "detail"; render(); }
+async function markVisited(poiId, pts) {
+  if (state.visits.has(poiId)) return;
+  const { error } = await supabase.from("visits").insert({ user_id: state.user.id, poi_id: poiId, points_awarded: pts });
+  if (error) { alert(error.message); return; }
+  state.visits.add(poiId);
+  await loadProfile();
+  render();
+}
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    state.currentTab = tab.dataset.tab;
+    state.exploreLevel = "state";
+    render();
+  });
+});
+init();
 </script>
 </body>
 </html>
