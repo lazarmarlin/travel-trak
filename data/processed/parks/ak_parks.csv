@@ -1,0 +1,3 @@
+state,name,poi_type,osm_type,osm_id,lat,lon,operator,website
+AK,Denali State Park,state_park,way,123,62.5,-150.0,Alaska State Parks,
+AK,Chugach State Park,state_park,way,456,61.1,-149.5,Alaska State Parks,
