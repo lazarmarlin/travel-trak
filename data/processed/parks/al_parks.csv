@@ -1,0 +1,5 @@
+state,name,poi_type,osm_type,osm_id,lat,lon,operator,website,wikipedia
+AL,Oak Mountain State Park,national_park,way,152253403,33.3436351,-86.7285869,Alabama State Parks,https://www.alapark.com/oak-mountain-state-park,en:Oak Mountain State Park
+AL,Frank Jackson State Park,national_park,relation,7171163,31.3096732,-86.2818538,Alabama State Parks,https://www.alapark.com/frank-jackson-state-park,en:Frank Jackson State Park
+AL,Desoto State Park,national_park,relation,7185092,34.4925747,-85.6260955,Alabama State Parks Division,https://www.alapark.com/desoto-state-park,en:DeSoto State Park
+AL,Birmingham Civil Rights National Monument,national_park,relation,11077269,33.5155643,-86.8140681,National Park Service,https://www.nps.gov/bicr/index.htm,en:Birmingham Civil Rights National Monument
