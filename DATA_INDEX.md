@@ -3,28 +3,28 @@
 Last updated: 2026-11-20
 
 ## Parks
-- `parks_all.csv` — 2,438 state + national parks/monuments
+- `parks_all.csv` — 2,438 state + national parks/monuments (local; partial in repo)
 
-## Categories (15 files)
-| File | Description |
+## Categories (expanded)
+| File | Approx Rows |
 |------|-------------|
-| `categories/regional_foods.csv` | Signature foods by state |
-| `categories/regional_chains.csv` | Regional restaurant chains |
-| `categories/museums.csv` | Major museums |
-| `categories/zoos_aquariums.csv` | Zoos and aquariums |
-| `categories/breweries.csv` | Notable breweries |
-| `categories/historic_sites.csv` | Historic sites |
-| `categories/stadiums.csv` | Stadiums and arenas |
-| `categories/beaches.csv` | Notable beaches |
-| `categories/lighthouses.csv` | Lighthouses |
-| `categories/state_capitols.csv` | State capitols + US Capitol |
-| `categories/national_forests.csv` | National forests |
-| `categories/covered_bridges.csv` | Covered bridges |
-| `categories/botanical_gardens.csv` | Botanical gardens |
-| `categories/amusement_parks.csv` | Amusement parks |
-| `categories/wildlife_refuges.csv` | National wildlife refuges |
-| `iconic_landmarks.csv` | One landmark per state |
-| `parks/state_high_points.csv` | State high points |
+| `categories/national_forests.csv` | 100 |
+| `categories/regional_foods.csv` | 51 |
+| `categories/state_capitols.csv` | 51 |
+| `categories/breweries.csv` | 40 |
+| `categories/regional_chains.csv` | 36 |
+| `categories/historic_sites.csv` | 35 |
+| `categories/zoos_aquariums.csv` | 35 |
+| `categories/museums.csv` | 34 |
+| `categories/stadiums.csv` | 34 |
+| `categories/beaches.csv` | 34 |
+| `categories/lighthouses.csv` | 20 |
+| `categories/amusement_parks.csv` | 15 |
+| `categories/wildlife_refuges.csv` | 15 |
+| `categories/botanical_gardens.csv` | 10 |
+| `categories/covered_bridges.csv` | 10 |
+| `iconic_landmarks.csv` | 51 |
+| `parks/state_high_points.csv` | 51 |
 
 ## Status
-Broad POI coverage. Ready for Supabase import or more categories.
+Categories significantly expanded. Parks complete locally. Ready for re-import into Supabase.
